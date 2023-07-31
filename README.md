@@ -1,167 +1,115 @@
-## 微信机器人Java版
+# weChatRobot
 
-个人微信(非公众号)微信机器人，根据指令自动回复好友消息、群聊陪聊、查天气、查垃圾分类，基于[ChatApi-WeChat](https://github.com/xuxiaoxiao-xxx/ChatApi-WeChat)构建。       
-<div align=center>
-      <img src="/doc/doc1.jpg" width = "500" height = "1500" />
-</div> 
+一个基于微信公众号的智能聊天机器人项目，CHATGLM2-6b对话模式回复内容，本项目由wechatrobot项目改写而来，通过花生壳域名绑定内网ip，调用机器人和chatglm2-6b的接口实现对公众号内容的问答。
 
-### 设计理念
+本项目还有Go实现的版本：<https://github.com/MartinDai/weChatRobot-go>
 
-主要是想写一个群助手，作为在群里的工具使用。所以这个机器人响应的信息主要是以指令前缀开头的。考虑到国内手机输入法的习惯，默认指令前缀是两个问号，因为拼音9宫格的布局问号在快捷栏里，方便输入。  
-对于具体指令，希望汉字优先，缩写为主。
+![qrcode](robot-web/src/main/resources/static/images/qrcode.jpg "扫码关注，体验智能机器人")
 
----
+## 项目介绍：
 
-## 最近动态
+  本项目是一个微信公众号项目，需配合微信公众号使用，在微信公众号配置本项目运行的服务器域名，用户关注公众号后，向公众号发送任意信息，公众号会根据用户发送的内容自动回复。
+  
+## 涉及框架及技术
 
-- `fastjson`1.2.58爆出重大漏洞，升级为1.2.60
-- 每日一句使用线程池调度，修复了之前使用`Timer`导致的调度稳定性差的bug
-- 新增查看每日新闻命令、查看知乎热榜命令。新功能必须开启redis才能使用。  
-- 垃圾分类接入AToolBox接口。AToolBox的数据库更全一些，还有近似词提示，但是接口有点慢，而且必须开启Redis。如果没开启redis缓存，可以换回LAJIFENLEIAPP。   
-- 新增Redis缓存，可将天气查询结果、垃圾分类查询结果缓存在Redis。如果自己没有Redis，可在配置文件中关闭缓存。关闭缓存不影响现有功能，但可能后续会更新一些依赖redis实现的功能。  
----
+- [Vert.x](https://github.com/eclipse-vertx/vert.x)
+- [Jackson](https://github.com/FasterXML/jackson)
+- [OkHttp](https://github.com/square/okhttp)
+- [Guava](https://github.com/google/guava)
+- [Openai-java](https://github.com/TheoKanning/openai-java)
 
-## 配置及使用
+_Tips:1.2版本开始使用Vert.x替换SpringBoot_
 
-需求环境：jdk 1.8+、Maven  
+## 支持的功能
 
-全局配置文件是[`resource/config.properties`](/src/main/resources/config.properties)。    
-缓存配置文件是[`resource/redis.properties`](/src/main/resources/redis.properties)。     
-程序入口：[`WechatBot.java`](/src/main/java/WechatBot.java)   
-启动程序后打开控制台输出的二维码链接，并使用微信扫描。     
-提示：任何非官方途径登陆网页微信都有可能导致封停账号登陆网页微信的权限(不影响其他端的使用)。建议使用小号。   
++ [x] 自定义关键字回复内容
++ [x] 调用ChatGPT接口回复内容（需配置启动参数或者环境变量：`OPENAI_API_KEY`）
++ [x] 调用图灵机器人(V2)接口回复内容（需配置启动参数或者环境变量：`TULING_API_KEY`）
 
-## 激活指令
+## 使用说明：
 
-默认的指令前缀是两个问号：`??`，中英文皆可。指令前缀＋具体指令组成一条完整的指令。如`北京天气`是一条天气指令，`??北京天气`是一条完整的指令，当具有天气模式权限的群里有群成员发送`??北京天气`时，此机器人会自动回复当日北京天气信息。    
-指令前缀可在配置文件中自定义。  
+1. 使用之前需要有微信公众号的帐号，没有的请戳[微信公众号申请](https://mp.weixin.qq.com/cgi-bin/readtemplate?t=register/step1_tmpl&lang=zh_CN)
+2. 如果需要使用图灵机器人的回复内容则需要[注册图灵机器人帐号](http://tuling123.com/register/email.jhtml)获取相应的ApiKey并配置在启动参数或者环境变量中
+3. 如果需要使用ChatGPT的回复内容则需要[创建OpenAI的API Key](https://platform.openai.com/account/api-keys)并配置在启动参数或者环境变量中
+4. 可以通过配置启动参数或者环境变量`OPENAI_BASE_DOMAIN`更换访问OpenAI的域名
+5. 可以通过配置启动参数或者环境变量`OPENAI_PROXY`使用代理服务访问OpenAI
+6. 内容响应来源的优先级`自定义关键 > ChatGPT > 图灵机器人`
+7. 在微信公众号后台配置回调URL为<https://wechatrobot.doodl6.com/weChat/receiveMessage>，其中`wechatrobot.doodl6.com`是你自己的域名，token与`config.yml`里面配置的保持一致即可
 
-### 指令举例
+## 开发部署
 
-```
-A. 获取详情
+### 本地启动
 
-？？
+直接运行类`com.doodl6.wechatrobot.MainVerticle`
 
-B. 查天气
+### jar包运行
 
-？？？
-？？天气
-？？北京天气
-？？海淀天气
-？？上海天气
-？？深圳天气
+maven编译打包
 
-C. 查垃圾分类
-
-？？？电池
-？？？无汞电池
-？？？塑料袋
-
-D. 当日新闻
-
-？？新闻
-
-E. 知乎热榜
-
-？？知乎
-？？知乎 1
-？？知乎2
+```shell
+mvn clean package
 ```
 
-### 1. 查询天气
+打包完成后，在robot-web/target目录会生成weChatRobot.jar
 
-程序监听相应群聊内容，当监听到以`天气`开始的语句便查询相应城市天气并自动发送到群聊。比如：`北京天气`、`北京市天气`。只支持国内(大部分)市、区、县查询，不支持省。小部分地区由于接口数据丢失的原因不支持。       
-如果监听到`?`、`天气`，会按发送人微信名片上的地址发送今日天气。  
-```
-完整指令举例：
+启动执行
 
-？？？
-？？天气
-？？北京天气
-？？上海天气
-？？海淀天气
-```    
-
-### 2. 自动回复好友 
-
-将配置文件`autoReplyFriend`设为`true`，便自动回复好友消息。不会回复黑名单中好友。  
-
-### 3. AI陪聊
-
-此功能默认只对白名单的群或好友开放。机器人会回复任何白名单的发送者的消息。  
-提示：免费的机器人都是人工智障，所以此功能建议作为测试、娱乐使用。  
-
-### 4. 查询垃圾分类
-
-当一条指令(去除前缀后)以问号`?`/`？`开头时，此指令为查询垃圾分类指令。输入具体垃圾查询垃圾分类。如`？？？电池`、`？？？无汞电池`。      
-
-```
-完整指令举例：
-
-？？？无汞电池
-？？？电池
-？？？塑料袋
-？？？卫生纸
-```  
-
-### 5. 每日一句
-
-在配置中启用每日一句，可在指定时间向指定群发送当日天气和名言名句。当日天气使用的是`api.WeatherApi`，每日一句使用`api.EveryDayHelloApi`。  
-如果当日配置的时间已经过了，则会从次日开始正常执行。  
-向好友发送消息尚未启用。  
-
-### 6. 查看实时新闻
-
-```
-??新闻
+```shell
+java -jar weChatRobot.jar
 ```
 
-### 7. 查看知乎热榜
+使用-D指定配置文件，支持相对路径和绝对路径
 
+```shell
+java -Dconfig=config-deploy.yml -jar weChatRobot.jar
 ```
-??知乎
-？？知乎 1
-？？知乎 3
+
+服务器部署后台运行
+
+```shell
+nohup java -jar weChatRobot.jar > ./console.log 2>&1 &
 ```
-## 数据来源
 
-### 1. 青云客
+在执行命令的当前目录查看console日志
 
-智能机器人API：https://www.sojson.com/api/semantic.html  
-青云客天气API：https://www.sojson.com/api/weather.html
+### native-image运行
 
-友情提示：人工智障在线陪聊，冷场利器、分手大师。  
+构建native-image(需要[graalvm版本的jdk](https://www.graalvm.org/downloads/))
 
-### 2. RollToolsApi
+```shell
+mvn clean package -P native-image
+```
 
-RollToolsApi：https://github.com/MZCretin/RollToolsApi  
+构建完成后，在robot-web/target目录会生成weChatRobot可执行文件，可以直接运行
 
-### 3. 每日一句
+```shell
+./weChatRobot
+```
 
-金山词霸： http://open.iciba.com/dsapi/
+**注意：native-image不支持通过-D指定配置**
 
-### 4. 垃圾分类
+### Docker运行
 
-LAJIFENLEIAPP: http://lajifenleiapp.com/
+构建适用于当前操作系统架构的镜像
 
-AToolBox: http://www.atoolbox.net/Tool.php?Id=804
+```shell
+docker build -f docker/Dockerfile --no-cache -t wechatrobot:latest .
+```
 
-### 5. 知乎热榜 
+构建指定架构的镜像
 
-知乎日报：https://news-at.zhihu.com/api/6/news/hot
+```shell
+docker buildx build -f docker/Dockerfile --no-cache -t wechatrobot:latest --platform=linux/amd64 -o type=docker .
+```
 
-## Acknowledgements
+如果需要构建native-image的镜像，替换上面命令中的`docker/Dockerfile`为`docker/native-image-Dockerfile`即可
 
-本项目离不开以下项目的灵感，在此对开发者表示感谢：
+后台运行镜像
 
-- [EverydayWechat](https://github.com/sfyc23/EverydayWechat)    
-微信助手：1.每日定时给好友发送定制消息。2.自动回复好友。 (Python)  
+```shell
+docker run --name wechatrobot -p 8080:8080 -d wechatrobot:latest
+```
 
-- [xuxiaoxiao-xxx/ChatApi-WeChat](https://github.com/xuxiaoxiao-xxx/ChatApi-WeChat)     
-Java版本微信聊天接口，使用网页微信API，让你能够开发自己的微信聊天机器人   
+## 感谢赞助
 
-
-## License
-
-[Apache License 2.0](https://github.com/scorego/WechatRobot/blob/master/LICENSE.md)
+[<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" width="140" height="140" alt="jetbrains"/>](https://www.jetbrains.com/community/opensource/#support)
